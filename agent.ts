@@ -11,7 +11,7 @@ import { parseStringPromise } from "xml2js";
 config({ path: ".env.local" });
 
 /**
- * This is a Level 1 GitHub Agent that:
+ * This is a Level 1 Coding Agent that:
  * 1. Listens for new Pull Request events
  * 2. Analyzes the PR's contents (title, files, commits)
  * 3. Generates a summary using AI
