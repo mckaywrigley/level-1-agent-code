@@ -5,8 +5,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "example": "tsx agent.ts",
-    "start": "tsx my-agent.ts"
+    "example": "nodemon --exec \"tsx agent.ts\" --ext ts",
+    "start": "nodemon --exec \"tsx my-agent.ts\" --ext ts",
+    "start:prod": "tsx agent.ts"
   },
   "author": "Mckay Wrigley",
   "license": "MIT",
