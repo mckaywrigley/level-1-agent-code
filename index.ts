@@ -1,56 +1,41 @@
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
 import { config } from "dotenv";
-import OpenAI from "openai";
 
 config({ path: ".env.local" });
 
-const openai = new OpenAI({
-  baseURL: "https://openrouter.ai/api/v1",
-  apiKey: process.env.OPENROUTER_API_KEY
-  // baseURL: "https://api.deepseek.com",
-  // apiKey: process.env.DEEPSEEK_API_KEY
-  // baseURL: "https://api.groq.com/openai/v1",
-  // apiKey: process.env.GROQ_API_KEY
+const openai = createOpenAI({
+  compatibility: "strict"
 });
-
-// const enhancedModel = wrapLanguageModel({
-//   model: groq("deepseek-r1-distill-llama-70b"),
-//   middleware: extractReasoningMiddleware({ tagName: "think" })
-// });
 
 async function main() {
   console.log("Starting...");
   try {
-    const response = await openai.chat.completions.create({
-      // model: "deepseek-reasoner",
-      model: "deepseek/deepseek-r1",
-      messages: [
-        { role: "system", content: "You are a helpful assistant." },
-        { role: "user", content: "How do I connect to the gmail api using typescript?" }
-      ]
-      // stream: true
+    const { text, usage, experimental_providerMetadata } = await generateText({
+      model: openai("o1-mini"),
+      prompt: ""
     });
 
-    console.log(response);
+    console.log("-- TEXT --\n", text);
+    console.log("\n\n\n--------------------------------\n\n\n");
+    console.log("-- USAGE --\n", usage);
 
-    // for await (const chunk of response) {
-    //   console.log(chunk.choices[0].delta);
-    // }
+    // Get cached tokens count
+    const cachedTokens = (experimental_providerMetadata?.openai?.cachedPromptTokens ?? 0) as number;
+    const uncachedTokens = (usage.promptTokens - cachedTokens) as number;
 
-    // const { text, reasoning, usage, ...rest } = await generateText({
-    //   model: enhancedModel,
-    //   messages: [
-    //     { role: "system", content: "You are a helpful assistant." },
-    //     { role: "user", content: "How do I connect to the gmail api using typescript?" }
-    //   ]
-    // });
-    // console.log("-- REST --\n", rest);
-    // console.log("\n\n\n--------------------------------\n\n\n");
-    // console.log("-- TEXT --\n", text);
-    // console.log("\n\n\n--------------------------------\n\n\n");
-    // console.log("-- REASONING --\n", reasoning);
-    // console.log("\n\n\n--------------------------------\n\n\n");
-    // console.log("-- USAGE --\n", usage);
-    // console.log("\n\n\n--------------------------------\n\n\n");
+    // Calculate costs with cache consideration
+    const cachedInputCost = (cachedTokens / 1_000_000) * 1.5; // $1.50 per 1M cached tokens
+    const uncachedInputCost = (uncachedTokens / 1_000_000) * 3.0; // $3.00 per 1M uncached tokens
+    const outputCost = (usage.completionTokens / 1_000_000) * 12.0; // $12.00 per 1M output tokens
+    const totalCost = cachedInputCost + uncachedInputCost + outputCost;
+
+    console.log("-- COSTS --");
+    console.log(`Cached input cost: $${cachedInputCost.toFixed(6)}`);
+    console.log(`Uncached input cost: $${uncachedInputCost.toFixed(6)}`);
+    console.log(`Output cost: $${outputCost.toFixed(6)}`);
+    console.log(`Total cost: $${totalCost.toFixed(6)}`);
+    console.log("\n\n\n--------------------------------\n\n\n");
   } catch (error) {
     console.error(error);
   }
