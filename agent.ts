@@ -162,7 +162,7 @@ Provide your review in the following XML format:
 
   try {
     const { text } = await generateText({
-      model: openai("o1-mini"),
+      model: openai("o1"),
       prompt
     });
 
