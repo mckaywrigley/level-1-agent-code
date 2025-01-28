@@ -9,6 +9,7 @@ import { generateText } from "ai";
 import bodyParser from "body-parser";
 import { config } from "dotenv";
 import express from "express";
+import SmeeClient from "smee-client";
 
 config({ path: ".env.local" });
 
@@ -167,6 +168,24 @@ ${summary}`;
 // ------------------------------------------------------------------
 const app = express();
 app.use(bodyParser.json());
+
+// Configure Smee client if WEBHOOK_PROXY_URL is provided
+const WEBHOOK_PROXY_URL = process.env.WEBHOOK_PROXY_URL;
+if (WEBHOOK_PROXY_URL) {
+  const smee = new SmeeClient({
+    source: WEBHOOK_PROXY_URL,
+    target: `http://localhost:${process.env.PORT || 3000}/webhook`,
+    logger: console
+  });
+
+  smee.start();
+  console.log("Smee client started");
+}
+
+// Test endpoint
+app.get("/", (req, res) => {
+  res.send("Hello World");
+});
 
 // Main webhook endpoint
 // GitHub sends all webhook events to this URL

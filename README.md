@@ -10,12 +10,12 @@ A **Level 1 AI Agent** that listens for new Pull Requests, summarizes them using
    npm install
    ```
 
-2. **Set up ngrok for Webhook**
+2. **Set up Smee.io for Webhook**
 
-   1. Install ngrok: https://ngrok.com/
-   2. Start your server: `npm run start`
-   3. In a new terminal: `ngrok http 3000`
-   4. Copy the ngrok HTTPS URL (like `https://xxxx-xx-xx-xxx-xx.ngrok.io`)
+   1. Go to [smee.io](https://smee.io)
+   2. Click "Start a new channel"
+   3. Copy the URL (looks like `https://smee.io/your-unique-url`)
+   4. Add it to your `.env.local` file as `WEBHOOK_PROXY_URL`
 
 3. **Create GitHub App**
 
@@ -23,7 +23,7 @@ A **Level 1 AI Agent** that listens for new Pull Requests, summarizes them using
    2. Fill in:
       - Name: `PR Summary Bot` (or your choice)
       - Homepage URL: `http://localhost:3000`
-      - Webhook URL: Your ngrok URL + `/webhook`
+      - Webhook URL: Your Smee.io URL from step 2
       - Webhook Secret: (optional, but recommended)
       - Permissions:
         - Pull Requests: Read & Write
