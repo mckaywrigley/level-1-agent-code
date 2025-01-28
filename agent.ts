@@ -56,6 +56,26 @@ const openai = createOpenAI({
 // ------------------------------------------------------------------
 // 2) HELPER FUNCTION TO SUMMARIZE USING OPENAI
 // ------------------------------------------------------------------
+
+// Add this helper function before the summarizePullRequest function
+async function calculateCosts(usage: any, experimental_providerMetadata: any) {
+  const cachedTokens = (experimental_providerMetadata?.openai?.cachedPromptTokens ?? 0) as number;
+  const uncachedTokens = (usage.promptTokens - cachedTokens) as number;
+
+  const cachedInputCost = (cachedTokens / 1_000_000) * 1.5; // $1.50 per 1M cached tokens
+  const uncachedInputCost = (uncachedTokens / 1_000_000) * 3.0; // $3.00 per 1M uncached tokens
+  const outputCost = (usage.completionTokens / 1_000_000) * 12.0; // $12.00 per 1M output tokens
+  const totalCost = cachedInputCost + uncachedInputCost + outputCost;
+
+  return {
+    cachedInputCost,
+    uncachedInputCost,
+    outputCost,
+    totalCost
+  };
+}
+
+// Modify the summarizePullRequest function to include cost logging
 async function summarizePullRequest(title: string, fileNames: string[], commitMessages: string[]): Promise<string> {
   // Craft a simple prompt
   const prompt = `Summarize this pull request in a concise paragraph:
@@ -68,10 +88,18 @@ Commit Messages:
 Summary:`; // We'll expect the model to fill in the summary after "Summary:"
 
   // Call AI SDK
-  const { text } = await generateText({
+  const { text, usage, experimental_providerMetadata } = await generateText({
     model: openai("o1-mini"),
     prompt
   });
+
+  // Calculate and log costs
+  const costs = await calculateCosts(usage, experimental_providerMetadata);
+  console.log("-- COSTS --");
+  console.log(`Cached input cost: $${costs.cachedInputCost.toFixed(6)}`);
+  console.log(`Uncached input cost: $${costs.uncachedInputCost.toFixed(6)}`);
+  console.log(`Output cost: $${costs.outputCost.toFixed(6)}`);
+  console.log(`Total cost: $${costs.totalCost.toFixed(6)}`);
 
   return text.trim();
 }

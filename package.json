@@ -5,7 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx agent-bot.ts"
+    "start": "tsx agent.ts"
   },
   "author": "Mckay Wrigley",
   "license": "MIT",
