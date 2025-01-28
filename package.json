@@ -5,7 +5,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx agent.ts"
+    "example": "tsx agent.ts",
+    "start": "tsx my-agent.ts"
   },
   "author": "Mckay Wrigley",
   "license": "MIT",

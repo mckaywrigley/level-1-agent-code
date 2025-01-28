@@ -13,17 +13,19 @@ import express from "express";
 config({ path: ".env.local" });
 
 /**
- * For a Level 1 Agent:
- * 1. Listen to "pull_request" opened events.
- * 2. Fetch PR data.
- * 3. Summarize with OpenAI.
- * 4. Post summary as a comment.
+ * This is a Level 1 GitHub Agent that:
+ * 1. Listens for new Pull Request events
+ * 2. Analyzes the PR's contents (title, files, commits)
+ * 3. Generates a summary using AI
+ * 4. Posts the summary as a comment on the PR
  */
 
 // ------------------------------------------------------------------
 // 1) SETUP GITHUB & OPENAI CLIENTS
 // ------------------------------------------------------------------
 
+// Validate required GitHub App credentials
+// These are needed to authenticate our app with GitHub
 const APP_ID = process.env.GITHUB_APP_ID;
 const PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY;
 const INSTALLATION_ID = process.env.GITHUB_INSTALLATION_ID;
@@ -37,7 +39,8 @@ if (!APP_ID || !PRIVATE_KEY || !INSTALLATION_ID) {
   );
 }
 
-// Initialize Octokit with App authentication
+// Initialize GitHub client (Octokit) with our app's credentials
+// This allows us to make authenticated API calls to GitHub
 const octokit = new Octokit({
   authStrategy: createAppAuth,
   auth: {
@@ -47,9 +50,10 @@ const octokit = new Octokit({
   }
 });
 
-// AI-SDK client for OpenAI
+// Initialize OpenAI client for generating summaries
+// Uses AI-SDK for better token management and caching
 const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY, // or use your custom approach
+  apiKey: process.env.OPENAI_API_KEY,
   compatibility: "strict"
 });
 
@@ -57,7 +61,12 @@ const openai = createOpenAI({
 // 2) HELPER FUNCTION TO SUMMARIZE USING OPENAI
 // ------------------------------------------------------------------
 
-// Add this helper function before the summarizePullRequest function
+/**
+ * Calculates the cost of AI API usage based on token counts
+ * - Cached tokens are cheaper ($1.50 per 1M tokens)
+ * - Uncached tokens cost more ($3.00 per 1M tokens)
+ * - Output tokens are most expensive ($12.00 per 1M tokens)
+ */
 async function calculateCosts(usage: any, experimental_providerMetadata: any) {
   const cachedTokens = (experimental_providerMetadata?.openai?.cachedPromptTokens ?? 0) as number;
   const uncachedTokens = (usage.promptTokens - cachedTokens) as number;
@@ -75,9 +84,15 @@ async function calculateCosts(usage: any, experimental_providerMetadata: any) {
   };
 }
 
-// Modify the summarizePullRequest function to include cost logging
+/**
+ * Generates an AI summary of a Pull Request
+ * @param title - The PR title
+ * @param fileNames - List of changed files
+ * @param commitMessages - List of commit messages
+ * @returns A concise summary paragraph
+ */
 async function summarizePullRequest(title: string, fileNames: string[], commitMessages: string[]): Promise<string> {
-  // Craft a simple prompt
+  // Construct a clear prompt for the AI model
   const prompt = `Summarize this pull request in a concise paragraph:
 
 PR Title: ${title}
@@ -85,9 +100,10 @@ Changed Files: ${fileNames.join(", ") || "None"}
 Commit Messages: 
 - ${commitMessages.join("\n- ") || "No commit messages"}
 
-Summary:`; // We'll expect the model to fill in the summary after "Summary:"
+Summary:`;
 
-  // Call AI SDK
+  // Generate the summary using OpenAI
+  // o1-mini is optimized for shorter, focused responses
   const { text, usage, experimental_providerMetadata } = await generateText({
     model: openai("o1-mini"),
     prompt
@@ -107,17 +123,25 @@ Summary:`; // We'll expect the model to fill in the summary after "Summary:"
 // ------------------------------------------------------------------
 // 3) WEBHOOK HANDLER
 // ------------------------------------------------------------------
+
+/**
+ * Handles the 'pull_request.opened' webhook event
+ * 1. Extracts PR details from the webhook payload
+ * 2. Fetches additional PR data (files, commits)
+ * 3. Generates and posts an AI summary comment
+ */
 async function handlePullRequestOpened(payload: any) {
+  // Extract repository and PR information from the webhook payload
   const owner = payload.repository.owner.login;
   const repo = payload.repository.name;
   const pullNumber = payload.pull_request.number;
   const title = payload.pull_request.title;
 
-  // Optional: fetch changed files
+  // Fetch the list of files changed in this PR
   const filesRes = await octokit.pulls.listFiles({ owner, repo, pull_number: pullNumber });
   const changedFileNames = filesRes.data.map((f) => f.filename);
 
-  // Optional: fetch commit messages
+  // Fetch all commit messages in this PR
   const commitsRes = await octokit.pulls.listCommits({ owner, repo, pull_number: pullNumber });
   const commitMessages = commitsRes.data.map((c) => c.commit.message);
 
@@ -144,13 +168,15 @@ ${summary}`;
 const app = express();
 app.use(bodyParser.json());
 
-// GitHub will send POST requests to /webhook
+// Main webhook endpoint
+// GitHub sends all webhook events to this URL
 app.post("/webhook", async (req, res) => {
   try {
+    // GitHub includes the event type in the headers
     const eventType = req.headers["x-github-event"];
     const payload = req.body;
 
-    // Only handle pull_request "opened"
+    // We only care about new PRs (pull_request.opened events)
     if (eventType === "pull_request" && payload.action === "opened") {
       await handlePullRequestOpened(payload);
     }
