@@ -5,12 +5,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "tsx agent.ts"
+    "start": "tsx agent-bot.ts"
   },
   "author": "Mckay Wrigley",
   "license": "MIT",
   "dependencies": {
     "@ai-sdk/openai": "^1.1.5",
+    "@octokit/auth-app": "^7.1.4",
     "@octokit/rest": "^21.1.0",
     "@types/xml2js": "^0.4.14",
     "ai": "^4.1.9",
