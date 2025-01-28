@@ -1,0 +1,3 @@
+# Project Instructions
+
+This project is a simple GitHub webhook agent that generates a summary of a pull request and comments on it.
