@@ -1,6 +1,6 @@
 # Level 1 Agent – PR Summarizer
 
-A **Level 1 AI Agent** that listens for new Pull Requests, summarizes them using OpenAI, and posts a comment on the PR.
+A **Level 1 AI Agent** that listens for new Pull Requests, summarizes them using OpenAI, and posts a comment as a bot.
 
 ## Setup
 
@@ -10,49 +10,54 @@ A **Level 1 AI Agent** that listens for new Pull Requests, summarizes them using
    npm install
    ```
 
-2. **Environment Variables**
+2. **Set up ngrok for Webhook**
+
+   1. Install ngrok: https://ngrok.com/
+   2. Start your server: `npm run start`
+   3. In a new terminal: `ngrok http 3000`
+   4. Copy the ngrok HTTPS URL (like `https://xxxx-xx-xx-xxx-xx.ngrok.io`)
+
+3. **Create GitHub App**
+
+   1. Go to GitHub Settings > Developer Settings > GitHub Apps > New GitHub App
+   2. Fill in:
+      - Name: `PR Summary Bot` (or your choice)
+      - Homepage URL: `http://localhost:3000`
+      - Webhook URL: Your ngrok URL + `/webhook`
+      - Webhook Secret: (optional, but recommended)
+      - Permissions:
+        - Pull Requests: Read & Write
+        - Contents: Read
+        - Metadata: Read
+      - Subscribe to events: Pull Request
+   3. Create app and save:
+      - App ID
+      - Download private key (.pem file)
+   4. Install app on your repository
+   5. Get installation ID from URL: `https://github.com/settings/installations/[ID]`
+
+4. **Environment Variables**
    - Copy `.env.example` to `.env.local`
-   - Set `OPENAI_API_KEY` and `GITHUB_TOKEN`
-
-## Run the Agent
-
-```bash
-npm run start
-```
-
-By default, this starts a webhook server at `http://localhost:3000`.
+   - Set:
+     ```
+     OPENAI_API_KEY=your-key
+     GITHUB_APP_ID=your-app-id
+     GITHUB_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----"
+     GITHUB_INSTALLATION_ID=your-installation-id
+     ```
+     Note: Convert .pem file contents to single line, replacing newlines with `\n`
 
 ## Usage
 
-### GitHub Webhook Setup
+The bot will automatically:
 
-#### Local Testing with ngrok
-
-1. Install ngrok: https://ngrok.com/
-2. Start your server: `npm run start`
-3. In a new terminal: `ngrok http 3000`
-4. Copy the ngrok HTTPS URL (like `https://xxxx-xx-xx-xxx-xx.ngrok.io`)
-
-#### Configure GitHub Webhook
-
-1. In your repo's Settings > Webhooks:
-   - Payload URL: Your ngrok URL + `/webhook` (e.g. `https://xxxx-xx-xx-xxx-xx.ngrok.io/webhook`)
-   - Content type: `application/json`
-   - Select "Pull requests" events
-   - Enable SSL verification
-   - Make sure webhook is Active
-
-### Operation
-
-1. Open a PR
-2. The agent automatically:
-   - Fetches PR data
-   - Generates a summary via OpenAI
-   - Comments on the PR
+1. Listen for new pull requests
+2. Generate a summary using OpenAI
+3. Post a comment as the bot account
 
 ## How It Works
 
 1. Express server listens for `pull_request.opened` events
 2. Octokit fetches PR details (files, commits)
 3. OpenAI generates a short summary
-4. GitHub receives the summary as a PR comment
+4. GitHub receives the summary as a bot comment
