@@ -1,7 +1,3 @@
-/**
- * /Users/mckaywrigley/Desktop/takeoff-ai/join-takeoff-example-repos/courses/levels-of-agents-course/agent-level-1/agent.ts
- */
-
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
